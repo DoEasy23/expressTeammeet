@@ -14,11 +14,17 @@ const storage = multer.diskStorage({
         cb(null, 'uploads/'); // Yüklenen resimlerin saklanacağı hedef klasörü belirtin
     },
     filename: function (req, file, cb) {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+        //front-end tarafında avatar olarak gönderilen dosya adını alın
+        const avatarName = req.body.avatar;
+        // Yüklenen resim dosyasının orijinal adını alın
+        const originalName = file.originalname;
+
+
         const extension = path.extname(file.originalname);
-        cb(null, uniqueSuffix + extension); // Yüklenen resim dosyası için dosya adını belirtin
+        cb(null, originalName, extension) // Yüklenen resim dosyası için dosya adını belirtin
     },
 });
+
 
 const upload = multer({ storage: storage });
 
