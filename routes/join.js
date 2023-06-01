@@ -40,4 +40,29 @@ router.get('/', async (req, res) => {
         res.status(500).send('Server Error');
     }
 });
+
+// Etkinliklere katılma taleplerini onaylama
+router.put('/:id', async (req, res) => {
+    try {
+        const joinRequest = await JoinRequest.findById(req.params.id);
+
+        if (!joinRequest) {
+            return res.status(404).json({ message: 'Join request not found.' });
+        }
+
+        // Etkinliği bulun ve katılımcılarına ekleyin
+        const event = await Event.findById(joinRequest.event);
+        event.participants.push(joinRequest.user);
+        await event.save();
+
+        // JoinRequest'i silin
+        await joinRequest.remove();
+        await joinRequest.save();
+
+        res.json({ message: 'Join request approved successfully.' });
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).send('Server Error');
+    }
+});
 module.exports = router;

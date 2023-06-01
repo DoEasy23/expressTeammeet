@@ -1,63 +1,82 @@
-    const express = require('express');
-    const router = express.Router();
-    const jwt = require('jsonwebtoken');
-    const bcrypt = require('bcrypt');
-    const User = require('../schemas/user.schema');
-    const { check, validationResult } = require('express-validator');
-    const auth = require("../auth/auth.MiddleWare")
+const express = require('express');
+const router = express.Router();
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
+const User = require('../schemas/user.schema');
+const { check, validationResult } = require('express-validator');
+const auth = require("../auth/auth.MiddleWare");
+const multer = require('multer');
+const path = require('path');
 
 
-    // User registration route
-    router.post('/signup', [
-        check('name', 'Name is required').notEmpty(),
-        check('email', 'Please include a valid email').isEmail(),
-        check('password', 'Please enter a password with 6 or more characters').isLength({ min: 6 }),
-        check('location', 'Location is required').notEmpty(),
-        check("phone","phone is required").notEmpty(),
-    ], async (req, res) => {
-        // Check for validation errors
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            return res.status(400).json({ errors: errors.array() });
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, 'uploads/'); // Yüklenen resimlerin saklanacağı hedef klasörü belirtin
+    },
+    filename: function (req, file, cb) {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+        const extension = path.extname(file.originalname);
+        cb(null, uniqueSuffix + extension); // Yüklenen resim dosyası için dosya adını belirtin
+    },
+});
+
+const upload = multer({ storage: storage });
+
+// Kullanıcı kaydı rotası
+router.post('/signup', upload.single('avatar'), [
+    check('name', 'Name is required').notEmpty(),
+    check('email', 'Please include a valid email').isEmail(),
+    check('password', 'Please enter a password with 6 or more characters').isLength({ min: 6 }),
+    check('location', 'Location is required').notEmpty(),
+    check("phone", "Phone is required").notEmpty(),
+], async (req, res) => {
+    // Doğrulama hatalarını kontrol et
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { name, email, password, location, phone } = req.body;
+
+    try {
+        // Kullanıcının zaten var olup olmadığını kontrol et
+        let user = await User.findOne({ email });
+        if (user) {
+            return res.status(400).json({ msg: 'User already exists' });
         }
 
-        const { name, email, password, location, phone } = req.body;
+        // Yeni bir kullanıcı oluştur
+        user = new User({ name, email, password, location, phone });
+        console.log(req.file);
+        if (req.file) {
+            const avatarUrl = req.file.path; // Yüklenen resim dosyasının yolunu al
+            user.avatarUrl = avatarUrl; // Kullanıcı nesnesinde avatarUrl alanını ayarla
+        }
 
-        try {
-            // Check if the user already exists
-            let user = await User.findOne({ email });
-            if (user) {
-                return res.status(400).json({ msg: 'User already exists' });
+        // Şifreyi hashle
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(password, salt);
+
+        // Kullanıcıyı veritabanına kaydet
+        await user.save();
+
+        // JWT token oluştur
+        const payload = {
+            user: {
+                id: user.id
             }
+        };
+        const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
 
-            // Create a new user
-            user = new User({ name, email, password, location, phone });
-            // Hash the password
-
-            const salt = await bcrypt.genSalt(10);
-            user.password = await bcrypt.hash(password, salt);
-
-
-            // Save the user to the database
-            await user.save();
-
-            // Create a JWT token
-            const payload = {
-                user: {
-                    id: user.id
-                }
-            };
-            const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
-
-            res.json({ token });
-        } catch (err) {
-            console.error(err.message);
-            res.status(500).send('Server Error');
-        }
-    });
+        res.json({ token });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
 
 
-    // User login route
+// User login route
     router.post('/login', [
         check('email', 'Please include a valid email').isEmail(),
         check('password', 'Password is required').exists()
