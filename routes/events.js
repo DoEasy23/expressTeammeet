@@ -31,11 +31,44 @@ router.get('/', async (req, res) => {
 router.delete('/:id', async (req, res) => {
     try {
         const event = await Event.findById(req.params.id);
+
         if (!event) {
-            return res.status(404).json({ msg: 'Event not found' });
+            return res.status(404).json({ message: 'Event not found.' });
         }
+
         await event.remove();
-        res.json({ msg: 'Event deleted' });
+        await event.save();
+
+        res.json({ message: 'Event deleted successfully.' });
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).send('Server Error');
+    }
+});
+// put an event
+router.put('/:id', async (req, res) => {
+    try {
+        const event = await Event.findById(req.params.id);
+
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found.' });
+        }
+        if (req.body.title) event.title = req.body.title;
+        if (req.body.date) event.date = req.body.date;
+        if (req.body.location) event.location = req.body.location;
+        if (req.body.description) event.description = req.body.description;
+        if (req.body.sport) event.sport = req.body.sport;
+        try {
+            await event.save();
+            res.json(event);
+        }
+        catch (err) {
+            console.error(err.message);
+            res.status(500).send('Server Error');
+        }
+
+
+        res.json({ message: 'Event updated successfully.' });
     } catch (error) {
         console.error(error.message);
         res.status(500).send('Server Error');

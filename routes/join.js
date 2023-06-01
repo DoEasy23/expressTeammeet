@@ -31,4 +31,13 @@ router.post('/', async (req, res) => {
     }
 });
 
+router.get('/', async (req, res) => {
+    try {
+        const joinRequests = await JoinRequest.find();
+        res.json(joinRequests);
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).send('Server Error');
+    }
+});
 module.exports = router;

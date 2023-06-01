@@ -189,7 +189,7 @@
             }
 
             // Delete the user from the database
-            await user.remove();
+            await user.deleteOne();
 
             res.json({ msg: 'User deleted' });
         } catch (err) {
