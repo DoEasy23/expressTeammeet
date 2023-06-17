@@ -7,7 +7,7 @@ const Event = require('../schemas/event.schema');
 // Etkinliklere katılma talebi gönderme
 router.post('/', async (req, res) => {
     try {
-        const { userId, eventId } = req.body;
+        const { userId, eventId, requestUserName } = req.body;
         console.log(userId, eventId);
         console.log(req.body)
 
@@ -19,7 +19,7 @@ router.post('/', async (req, res) => {
         }
 
         // Yeni JoinRequest nesnesi oluşturun
-        const joinRequest = new JoinRequest({ user: userId, event: eventId });
+        const joinRequest = new JoinRequest({ user: userId, event: eventId, requestUserName: requestUserName });
 
         // JoinRequest'i kaydedin
         await joinRequest.save();
@@ -41,7 +41,8 @@ router.get('/', async (req, res) => {
     }
 });
 
-// Etkinliklere katılma taleplerini onaylama
+// Etkinliklerin statüsünü değiştirme
+
 router.put('/:id', async (req, res) => {
     try {
         const joinRequest = await JoinRequest.findById(req.params.id);
@@ -50,19 +51,15 @@ router.put('/:id', async (req, res) => {
             return res.status(404).json({ message: 'Join request not found.' });
         }
 
-        // Etkinliği bulun ve katılımcılarına ekleyin
-        const event = await Event.findById(joinRequest.event);
-        event.participants.push(joinRequest.user);
-        await event.save();
+        if (req.body.status) joinRequest.status = req.body.status;
 
-        // JoinRequest'i silin
-        await joinRequest.remove();
         await joinRequest.save();
 
-        res.json({ message: 'Join request approved successfully.' });
+        res.json({ message: 'Join request updated successfully.' });
     } catch (error) {
         console.error(error.message);
         res.status(500).send('Server Error');
     }
-});
+}
+);
 module.exports = router;

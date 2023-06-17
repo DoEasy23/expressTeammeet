@@ -11,6 +11,10 @@ const JoinRequestSchema = new mongoose.Schema({
         ref: 'Event',
         required: true
     },
+    requestUserName: {
+        type: String,
+        required: true
+    },
     status: {
         type: String,
         enum: ['Pending', 'Accepted', 'Rejected'],

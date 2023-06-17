@@ -222,5 +222,26 @@ router.post('/signup', upload.single('avatar'), [
             res.status(500).send('Server Error');
         }
     });
+    //update avatar
+router.put('/updateAvatar', auth, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        if (!user) {
+            return res.status(404).json({ msg: 'User not found' });
+        }
+        if (req.file) {
+            console.log(req.file)
+            const newAvatarUrl = req.file.path; // Yüklenen resim dosyasının yolunu al
+            console.log(newAvatarUrl)
+            user.avatarUrl = newAvatarUrl; // Kullanıcı nesnesinde avatarUrl alanını güncelle
+            await user.save(); // Kullanıcı nesnesini veritabanına kaydet
+        }
+        res.json(user);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
 
-    module.exports = router;
+
+module.exports = router;
